@@ -135,8 +135,8 @@ def yolo_from_mask(mask):
 
 def render_object(model_path, class_id, num_views=NUM_VIEWS):
     mesh = trimesh.load(model_path)
-    mesh.apply_translation(-mesh.centroid)
-    vertices = np.asarray(mesh.vertices)
+    mesh.apply_translation(-mesh.centroid) # type: ignore
+    vertices = np.asarray(mesh.vertices) # type: ignore
 
     for dist_name, dist_range in DISTANCE_SETS.items():
         print(f"Rendering {dist_name} views...")
