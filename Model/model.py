@@ -123,37 +123,37 @@ class YOLOv8FromScratch(nn.Module):
 
     def forward(self, x):
         # --- Backbone ---
-        x = self.p0(x)       # [B, 64, H/2, W/2]
-        x = self.p1(x)       # [B, 128, H/4, W/4]
-        x_c2f_1 = self.c2f_1(x) # [B, 128, H/4, W/4]
+        x = self.p0(x)  # [B, 64, H/2, W/2]
+        x = self.p1(x)  # [B, 128, H/4, W/4]
+        x_c2f_1 = self.c2f_1(x)  # [B, 128, H/4, W/4]
 
-        x = self.p2(x_c2f_1) # [B, 256, H/8, W/8]
+        x = self.p2(x_c2f_1)  # [B, 256, H/8, W/8]
         x_p3 = self.c2f_2(x)  # P3 feature map (stride 8)
 
-        x = self.p3(x_p3)    # [B, 512, H/16, W/16]
+        x = self.p3(x_p3)  # [B, 512, H/16, W/16]
         x_p4 = self.c2f_3(x)  # P4 feature map (stride 16)
 
-        x = self.p4(x_p4)    # [B, 1024, H/32, W/32]
+        x = self.p4(x_p4)  # [B, 1024, H/32, W/32]
         x = self.c2f_4(x)
-        x_p5 = self.sppf(x)   # P5 feature map (stride 32)
+        x_p5 = self.sppf(x)  # P5 feature map (stride 32)
 
         # --- Neck (Top-Down FPN) ---
         # P5 -> P4
         up_p5 = self.upsample(x_p5)
-        x_neck1 = torch.cat([up_p5, x_p4], dim=1) # [B, 1024+512, H/16, W/16]
-        x_neck1 = self.neck_c2f_1(x_neck1)       # [B, 512, H/16, W/16]
+        x_neck1 = torch.cat([up_p5, x_p4], dim=1)  # [B, 1024+512, H/16, W/16]
+        x_neck1 = self.neck_c2f_1(x_neck1)  # [B, 512, H/16, W/16]
 
         # P4 -> P3
         up_p4 = self.upsample(x_neck1)
-        x_neck2 = torch.cat([up_p4, x_p3], dim=1) # [B, 512+256, H/8, W/8]
-        x_neck2 = self.neck_c2f_2(x_neck2)       # [B, 256, H/8, W/8]
+        x_neck2 = torch.cat([up_p4, x_p3], dim=1)  # [B, 512+256, H/8, W/8]
+        x_neck2 = self.neck_c2f_2(x_neck2)  # [B, 256, H/8, W/8]
 
         # --- Head ---
         # The three feature maps we feed to the head are:
         # P3: x_neck2 (Small objects)
         # P4: x_neck1 (Medium objects)
         # P5: x_p5    (Large objects)
-        
+
         # Note: Your original code had (features_p3, features_p4, features_p5)
         # We map them like this:
         features = [x_neck2, x_neck1, x_p5]
@@ -166,7 +166,7 @@ class YOLOv8FromScratch(nn.Module):
             # Pass through the decoupled head
             pred_box = reg_conv(feature_map)
             pred_cls = cls_conv(feature_map)
-            
+
             bbox_outputs.append(pred_box)
             class_logits.append(pred_cls)
 
@@ -174,7 +174,6 @@ class YOLOv8FromScratch(nn.Module):
         # bbox_outputs = list of 3 tensors: [B, 64, H/8, W/8], [B, 64, H/16, W/16], [B, 64, H/32, W/32]
         # class_logits = list of 3 tensors: [B, 80, H/8, W/8], [B, 80, H/16, W/16], [B, 80, H/32, W/32]
         return bbox_outputs, class_logits
-
 
 
 def compute_ciou_loss(boxes1, boxes2, eps=1e-7):
@@ -210,7 +209,7 @@ def compute_ciou_loss(boxes1, boxes2, eps=1e-7):
         torch.atan(b1_w / (b1_h + eps)) - torch.atan(b2_w / (b2_h + eps)), 2
     )
     with torch.no_grad():
-        alpha = v / (1 - iou + v + eps) # type: ignore
+        alpha = v / (1 - iou + v + eps)  # type: ignore
 
     # CIoU = IoU - (distance_penalty + aspect_ratio_penalty)
     ciou_loss = 1 - iou + (rho_sq / c_diag_sq) + (alpha * v)  # type: ignore # Final CIoU loss

@@ -450,19 +450,20 @@ class v8DetectionLoss(nn.Module):
     def bbox_dist2bbox(self, pred_dist, anchor_points, stride_tensor):
         """
         Decodes the DFL (Distribution Focal Loss) output into bounding boxes.
+        Ensures all tensors are on the same device.
         """
-
         # Reshape: [B, 64, N] -> [B, 4, 16, N]
         pred_dist = pred_dist.view(pred_dist.shape[0], 4, self.reg_max, -1)
 
         # Apply softmax to the 16 bins to get a probability distribution
         pred_dist_probs = F.softmax(pred_dist, dim=2)
 
-        # [B, 4, 16, N] * [1, 1, 16, 1] -> [B, 4, N]
-        ltrb_offsets = (pred_dist_probs * self.proj.view(1, 1, -1, 1)).sum(dim=2) # type: ignore
+        # Ensure self.proj is on the same device as pred_dist
+        proj = self.proj.to(pred_dist.device) # type: ignore
+        ltrb_offsets = (pred_dist_probs * proj.view(1, 1, -1, 1)).sum(dim=2) # type: ignore
 
         # Scale the offsets by the stride [1, 1, N]
-        ltrb_offsets_scaled = ltrb_offsets * stride_tensor.transpose(0, 1).unsqueeze(0)
+        ltrb_offsets_scaled = ltrb_offsets * stride_tensor.transpose(0, 1).unsqueeze(0) # type: ignore
 
         # anchor_points [N, 2] -> [1, 2, N]
         anchor_points_unsqueezed = anchor_points.transpose(0, 1).unsqueeze(0)
