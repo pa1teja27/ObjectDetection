@@ -459,11 +459,11 @@ class v8DetectionLoss(nn.Module):
         pred_dist_probs = F.softmax(pred_dist, dim=2)
 
         # Ensure self.proj is on the same device as pred_dist
-    proj = self.proj.to(pred_dist.device)
-    ltrb_offsets = (pred_dist_probs * proj.view(1, 1, -1, 1)).sum(dim=2)
+        proj = self.proj.to(pred_dist.device) # type: ignore
+        ltrb_offsets = (pred_dist_probs * proj.view(1, 1, -1, 1)).sum(dim=2) # type: ignore
 
         # Scale the offsets by the stride [1, 1, N]
-        ltrb_offsets_scaled = ltrb_offsets * stride_tensor.transpose(0, 1).unsqueeze(0)
+        ltrb_offsets_scaled = ltrb_offsets * stride_tensor.transpose(0, 1).unsqueeze(0) # type: ignore
 
         # anchor_points [N, 2] -> [1, 2, N]
         anchor_points_unsqueezed = anchor_points.transpose(0, 1).unsqueeze(0)
